@@ -281,6 +281,7 @@ a:hover { text-decoration: underline; }
 .pred-before { background: #1a1a2e; color: #4af; border: 1px solid #4af; }
 .pred-after { background: #1a2a1a; color: #44ff88; border: 1px solid #44ff88; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 </head>
 <body>
 
@@ -344,9 +345,7 @@ a:hover { text-decoration: underline; }
 <!-- 模块四：持仓板块资金流 -->
 <div class="section">
   <div class="section-title">◆ 持仓板块资金流</div>
-  <div class="flow-grid" id="flowGrid">
-    <div style="color:#333;padding:20px;">加载中...</div>
-  </div>
+  <div id="plateTreeMap" style="width:100%;height:380px;"></div>
 </div>
 
 <!-- 状态栏 -->
@@ -620,20 +619,75 @@ async function loadFromDataFile() {
   } catch(e) { console.error('data.json加载失败', e); }
 }
 
+// renderStaticFlows: 用于周末/收盘后展示 data.json 兜底数据（ECharts treemap）
 function renderStaticFlows(flows) {
-  const grid = document.getElementById('flowGrid');
-  if (!grid) return;
-  grid.innerHTML = flows.map(f => {
-    const maxV = Math.max(...Object.values(f).filter((v,k)=>k!=='name'&&k!=='funds').map(Math.abs), 1);
-    const rows = ['散户','大户','机构','主力'].map(k => {
-      const v = f[k] || 0;
-      const pct = Math.abs(v)/maxV*100;
-      const cls = colorCls(v);
-      const sign = v>=0?'+':'-';
-      return `<div class="flow-row"><span class="flow-label">${k}</span><div class="flow-bar-bg"><div class="flow-bar-${v>=0?'in':'out'}" style="width:${pct}%"></div></div><span class="flow-val ${cls}">${sign}${(Math.abs(v)/10000).toFixed(1)}万</span></div>`;
-    }).join('');
-    return `<div class="flow-card"><div class="flow-title">${f.name} <span style="font-size:11px;color:#555;font-weight:normal;">(${f.funds.join('/')})</span></div><div class="flow-bars">${rows}</div></div>`;
-  }).join('');
+  const dom = document.getElementById('plateTreeMap');
+  if (!dom) return;
+
+  if (!plateChart) {
+    plateChart = echarts.init(dom, null, { renderer: 'canvas' });
+    window.addEventListener('resize', () => plateChart && plateChart.resize());
+  }
+
+  const maxAbs = Math.max(...flows.map(f => Math.abs((f.散户||0)+(f.大户||0)+(f.主力||0))), 1);
+
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(10,10,10,0.95)',
+      borderColor: '#333', borderWidth: 1,
+      textStyle: { color: '#fff', fontFamily: 'Courier New' },
+      formatter(params) {
+        const d = params.data;
+        const sign = v => v >= 0 ? '+' : '';
+        const fmt = v => `${sign(v)}${(v/1e8).toFixed(2)}亿`;
+        const pct = d.total >= 0 ? '▲ 吸筹中' : '▼ 流出中';
+        const cls = d.total >= 0 ? '#ff4444' : '#44ff88';
+        return `<div style="font-size:13px;font-weight:bold;margin-bottom:6px;">${d.name}</div>
+          <div style="color:${cls};font-size:15px;margin-bottom:5px;">${fmt(d.total)} &nbsp;<span style="font-size:11px;">${pct}</span></div>
+          <div style="font-size:11px;color:#aaa;line-height:1.8;">
+            🌱 散户 &nbsp;${fmt(d.散户)}<br>
+            🏠 大户 &nbsp;${fmt(d.大户)}<br>
+            ⚡ 主力 &nbsp;${fmt(d.主力)}
+          </div>`;
+      }
+    },
+    series: [{
+      type: 'treemap',
+      width: '100%', height: '100%',
+      top: 0, bottom: 0, left: 0, right: 0,
+      borderWidth: 2, borderColor: '#111',
+      label: {
+        show: true, formatter: '{b}', fontSize: 12,
+        fontFamily: 'PingFang SC, Microsoft YaHei, Courier New',
+        color: '#fff', textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 4,
+        overflow: 'truncate', ellipsis: true,
+      },
+      upperLabel: { show: false },
+      itemStyle: { borderRadius: 4, gapWidth: 3 },
+      levels: [{ itemStyle: { borderColor: '#111', borderWidth: 3, gapWidth: 4 } }],
+      data: flows.map(f => {
+        const total = (f.散户||0)+(f.大户||0)+(f.主力||0);
+        const isUp = total >= 0;
+        const abs = Math.abs(total);
+        const alpha = 0.45 + 0.55 * (abs / maxAbs);
+        const baseColor = isUp ? [255,68,68] : [68,255,136];
+        const [r,g,b] = baseColor;
+        return {
+          name: f.name,
+          value: total,
+          散户: f.散户||0, 大户: f.大户||0, 主力: f.主力||0,
+          itemStyle: {
+            color: `rgba(${r},${g},${b},${alpha.toFixed(2)})`,
+            borderColor: isUp ? 'rgba(255,100,100,0.3)' : 'rgba(100,255,150,0.3)',
+          }
+        };
+      })
+    }]
+  };
+
+  plateChart.setOption(option, { notMerge: true });
 }
 
 function renderStaticPlates(plates) {
@@ -803,92 +857,114 @@ async function loadGold() {
 }
 
 // === 持仓板块资金流（参考小鹿看数据风格）===
+// === 模块四：ECharts 树状热力图（替代 loadFundFlows） ===
+let plateChart = null;
+let lastPlateData = [];
+
 async function loadFundFlows() {
-  const container = document.getElementById('flowGrid');
+  const dom = document.getElementById('plateTreeMap');
+  if (!dom) return;
 
-  // 渲染卡片骨架（基于 CONFIG.plates）
-  container.innerHTML = CONFIG.plates.map(p => `
-    <div class="flow-card" id="flow-card-${p.code}">
-      <div class="flow-card-top">
-        <div class="flow-name">${p.name}</div>
-        <div class="flow-amount" id="fa-${p.code}">--</div>
-      </div>
-      <div class="flow-sub-bars">
-        <div class="flow-bar-row">
-          <span class="flow-bar-label">🌱 散户</span>
-          <div class="flow-bar-bg"><div class="flow-bar-fill" id="bar-${p.code}-散户" style="width:0%"></div></div>
-          <span class="flow-bar-val" id="fv-${p.code}-散户">--</span>
-        </div>
-        <div class="flow-bar-row">
-          <span class="flow-bar-label">🏠 大户</span>
-          <div class="flow-bar-bg"><div class="flow-bar-fill" id="bar-${p.code}-大户" style="width:0%"></div></div>
-          <span class="flow-bar-val" id="fv-${p.code}-大户">--</span>
-        </div>
-        <div class="flow-bar-row">
-          <span class="flow-bar-label">⚡ 主力</span>
-          <div class="flow-bar-bg"><div class="flow-bar-fill" id="bar-${p.code}-主力" style="width:0%"></div></div>
-          <span class="flow-bar-val" id="fv-${p.code}-主力">--</span>
-        </div>
-      </div>
-      <div class="flow-tag" id="ftag-${p.code}"></div>
-    </div>
-  `).join('');
-
-  // 加载各板块资金流
-  for (const plate of CONFIG.plates) {
-    try {
-      const flow = await fetchPlateFlow(plate.code);
-      if (!flow) continue;
-
-      const { 散户, 大户, 主力 } = flow;
-      const total = (散户 || 0) + (大户 || 0) + (主力 || 0);
-      const maxAbs = Math.max(Math.abs(散户||0), Math.abs(大户||0), Math.abs(主力||0), 1);
-
-      // 净流入金额
-      const faEl = document.getElementById(`fa-${plate.code}`);
-      const fmtY = v => v >= 0 ? `+${(v/100000000).toFixed(2)}亿` : `${(v/100000000).toFixed(2)}亿`;
-      const newText = fmtY(total);
-      if (faEl.textContent !== newText) {
-        faEl.textContent = newText;
-        faEl.className = `flow-amount ${total >= 0 ? 'up' : 'down'}`;
-        // 动态闪烁效果
-        faEl.classList.remove('flash-up','flash-down');
-        void faEl.offsetWidth; // reflow 触发重绘
-        faEl.classList.add(total >= 0 ? 'flash-up' : 'flash-down');
-      }
-
-      // 三条分项条
-      for (const k of ['散户', '大户', '主力']) {
-        const v = flow[k] || 0;
-        const pct = Math.abs(v) / maxAbs * 100;
-        const bar = document.getElementById(`bar-${plate.code}-${k}`);
-        const val = document.getElementById(`fv-${plate.code}-${k}`);
-        if (bar) {
-          bar.style.width = pct + '%';
-          bar.className = `flow-bar-fill ${colorCls(v)}`;
-        }
-        if (val) {
-          val.textContent = fmtY(v);
-          val.className = `flow-bar-val ${colorCls(v)}`;
-        }
-      }
-
-      // 状态标签
-      const tag = document.getElementById(`ftag-${plate.code}`);
-      if (tag) {
-        if (total > 0) {
-          tag.textContent = '▲ 吸筹中';
-          tag.className = 'flow-tag tag-in';
-        } else {
-          tag.textContent = '▼ 流出中';
-          tag.className = 'flow-tag tag-out';
-        }
-      }
-
-    } catch(e) {
-      console.error('Flow error:', plate.code, e);
-    }
+  // 首次初始化
+  if (!plateChart) {
+    plateChart = echarts.init(dom, null, { renderer: 'canvas' });
+    window.addEventListener('resize', () => plateChart && plateChart.resize());
   }
+
+  // 收集11个板块数据
+  const plates = await Promise.allSettled(CONFIG.plates.map(async p => {
+    try {
+      const flow = await fetchPlateFlow(p.code);
+      const total = (flow.散户||0) + (flow.大户||0) + (flow.主力||0);
+      return { name: p.name, code: p.code, total, 散户: flow.散户||0, 大户: flow.大户||0, 主力: flow.主力||0 };
+    } catch { return null; }
+  }));
+
+  const validPlates = plates.filter(p => p.status === 'fulfilled' && p.value).map(p => p.value);
+  lastPlateData = validPlates;
+
+  const maxAbs = Math.max(...validPlates.map(p => Math.abs(p.total)), 1);
+
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(10,10,10,0.95)',
+      borderColor: '#333',
+      borderWidth: 1,
+      textStyle: { color: '#fff', fontFamily: 'Courier New' },
+      formatter(params) {
+        const d = params.data;
+        const sign = v => v >= 0 ? '+' : '';
+        const fmt = v => `${sign(v)}${(v/1e8).toFixed(2)}亿`;
+        const pct = d.total >= 0 ? '▲ 吸筹中' : '▼ 流出中';
+        const cls = d.total >= 0 ? '#ff4444' : '#44ff88';
+        return `<div style="font-size:13px;font-weight:bold;margin-bottom:6px;">${d.name}</div>
+          <div style="color:${cls};font-size:15px;margin-bottom:5px;">${fmt(d.total)} &nbsp;<span style="font-size:11px;">${pct}</span></div>
+          <div style="font-size:11px;color:#aaa;line-height:1.8;">
+            🌱 散户 &nbsp;${fmt(d.散户)}<br>
+            🏠 大户 &nbsp;${fmt(d.大户)}<br>
+            ⚡ 主力 &nbsp;${fmt(d.主力)}
+          </div>`;
+      }
+    },
+    series: [{
+      type: 'treemap',
+      width: '100%',
+      height: '100%',
+      top: 0, bottom: 0, left: 0, right: 0,
+      borderWidth: 2,
+      borderColor: '#111',
+      label: {
+        show: true,
+        formatter: '{b}',
+        fontSize: 12,
+        fontFamily: 'PingFang SC, Microsoft YaHei, Courier New',
+        color: '#fff',
+        textShadowColor: 'rgba(0,0,0,0.8)',
+        textShadowBlur: 4,
+        overflow: 'truncate',
+        ellipsis: true,
+      },
+      upperLabel: { show: false },
+      itemStyle: {
+        borderRadius: 4,
+        gapWidth: 3,
+      },
+      visualMin: -maxAbs,
+      visualMax: maxAbs,
+      color: ['#44ff88', '#2a9955', '#1a6633', '#44ff88', '#ff6644', '#ff3333', '#cc1111'],
+      levels: [{
+        itemStyle: { borderColor: '#111', borderWidth: 3, gapWidth: 4 }
+      }, {
+        itemStyle: { borderColor: '#1a1a1a', borderWidth: 2, gapWidth: 3 },
+        colorSaturation: [0.35, 0.75],
+        color: ['#ff4444','#cc2222','#991111','#ff6644','#ff9966',
+                '#44ff88','#22cc55','#119933','#88ff99','#aaffbb'],
+        colorMappingBy: 'value',
+        formatter: '{b}',
+        colorAlpha: [0.5, 1.0],
+      }],
+      data: validPlates.map(p => {
+        const isUp = p.total >= 0;
+        const abs = Math.abs(p.total);
+        const alpha = 0.45 + 0.55 * (abs / maxAbs); // 金额越大颜色越深
+        const baseColor = isUp ? [255, 68, 68] : [68, 255, 136];
+        const [r, g, b] = baseColor;
+        return {
+          name: p.name,
+          value: p.total,
+          散户: p.散户, 大户: p.大户, 主力: p.主力,
+          itemStyle: {
+            color: `rgba(${r},${g},${b},${alpha.toFixed(2)})`,
+            borderColor: isUp ? 'rgba(255,100,100,0.3)' : 'rgba(100,255,150,0.3)',
+          }
+        };
+      })
+    }]
+  };
+
+  plateChart.setOption(option, { notMerge: true });
 }
 
 // === 4. 板块异动 ===
