@@ -199,6 +199,12 @@ a:hover { text-decoration: underline; }
 .flow-tag.tag-in { background: #2a0000; color: #ff6666; }
 .flow-tag.tag-out { background: #002200; color: #66ff99; }
 
+/* 数值刷新闪烁 */
+@keyframes flash-up { 0%{opacity:1} 50%{opacity:0.4;color:#ff8888} 100%{opacity:1} }
+@keyframes flash-down { 0%{opacity:1} 50%{opacity:0.4;color:#88ff88} 100%{opacity:1} }
+.flash-up { animation: flash-up 0.6s ease-out; }
+.flash-down { animation: flash-down 0.6s ease-out; }
+
 /* 黄金 */
 .gold-card {
   display: grid;
@@ -822,8 +828,15 @@ async function loadFundFlows() {
       // 净流入金额
       const faEl = document.getElementById(`fa-${plate.code}`);
       const fmtY = v => v >= 0 ? `+${(v/100000000).toFixed(2)}亿` : `${(v/100000000).toFixed(2)}亿`;
-      faEl.textContent = fmtY(total);
-      faEl.className = `flow-amount ${total >= 0 ? 'up' : 'down'}`;
+      const newText = fmtY(total);
+      if (faEl.textContent !== newText) {
+        faEl.textContent = newText;
+        faEl.className = `flow-amount ${total >= 0 ? 'up' : 'down'}`;
+        // 动态闪烁效果
+        faEl.classList.remove('flash-up','flash-down');
+        void faEl.offsetWidth; // reflow 触发重绘
+        faEl.classList.add(total >= 0 ? 'flash-up' : 'flash-down');
+      }
 
       // 三条分项条
       for (const k of ['散户', '大户', '主力']) {
@@ -952,7 +965,8 @@ function updateNextAutoRefresh() {
 // 启动
 updateRateLimitUI();
 loadAllData();
-setInterval(loadAllData, 5 * 60 * 1000); // 每5分钟静默刷新（不计入限制）
+setInterval(loadAllData, 5 * 60 * 1000); // 每5分钟全量刷新
+setInterval(loadFundFlows, 30 * 1000);           // 每30秒刷新板块资金流
 setInterval(updateNextAutoRefresh, 30000);
 </script>
 </body>
