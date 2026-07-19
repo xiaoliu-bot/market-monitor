@@ -150,6 +150,38 @@ a:hover { text-decoration: underline; }
 .flow-out { background: #001a00; color: #66ff99; }
 .plate-amount { font-size: 11px; color: #555; margin-top: 4px; }
 
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #222;
+  border-radius: 0 0 6px 6px;
+  background: #0a0a0a;
+}
+.flow-card {
+  border: 1px solid #222;
+  border-radius: 6px;
+  padding: 12px;
+  background: #111;
+}
+.flow-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: #e6edf3;
+  margin-bottom: 8px;
+}
+.flow-bars { display: flex; flex-direction: column; gap: 4px; }
+.flow-row { display: flex; align-items: center; gap: 8px; }
+.flow-label { font-size: 12px; color: #888; width: 52px; flex-shrink: 0; }
+.flow-bar-bg { flex: 1; height: 8px; background: #1a1a1a; border-radius: 4px; overflow: hidden; }
+.flow-bar-in { height: 100%; background: linear-gradient(90deg, #ff4444, #ff8888); border-radius: 4px; transition: width 0.4s; }
+.flow-bar-out { height: 100%; background: linear-gradient(90deg, #008844, #44ff88); border-radius: 4px; transition: width 0.4s; }
+.flow-val { font-size: 12px; font-weight: bold; width: 72px; text-align: right; flex-shrink: 0; }
+.flow-val.up { color: #ff4444; }
+.flow-val.down { color: #44ff88; }
+.flow-val.flat { color: #888; }
+
 /* 黄金 */
 .gold-card {
   display: grid;
@@ -317,28 +349,18 @@ const CONFIG = {
     { code: 'HSTECH', name: '恒生科技', market: 'hk', type: 'hk' },
   ],
   plates: [
-    { code: '886052', name: '芯片半导体' },
+    { code: '886052', name: '芯片' },
+    { code: '886035', name: '半导体' },
     { code: '886059', name: '细分化工' },
+    { code: '886031', name: '科创创业AI' },
+    { code: '886541', name: '机器人' },
+    { code: '886542', name: '新能源电池' },
+    { code: '886054', name: '锂矿' },
     { code: '886083', name: 'CPO' },
     { code: '886041', name: 'PCB' },
-    { code: '886080', name: '创新药' },
-    { code: '886054', name: '锂矿' },
-    { code: '886542', name: '新能源电池' },
-    { code: '886541', name: '机器人' },
-    { code: '886031', name: '科创创业AI' },
-    { code: '886035', name: '半导体' },
     { code: 'HSTECH', name: '恒生科技' },
   ],
-  fundPlates: {
-    '019018': { name: '科技信息', code: '886037' },
-    '008888': { name: '芯片半导体', code: '886052' },
-    '022365': { name: '科创创业AI', code: '886031' },
-    '027048': { name: '科创创业AI', code: '886031' },
-    '020274': { name: '细分化工', code: '886059' },
-    '290008': { name: '锂矿', code: '886054' },
-    '017223': { name: '新能源电池', code: '886542' },
-    '020482': { name: '机器人', code: '886541' },
-  }
+  fundPlates: {}
 };
 
 // ===== 颜色 =====
@@ -936,3 +958,4 @@ setInterval(updateNextAutoRefresh, 30000);
 </script>
 </body>
 </html>
+
