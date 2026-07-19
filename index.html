@@ -534,21 +534,40 @@ function showAlert(msg, type='info') {
   setTimeout(renderAlerts, 3000);
 }
 
+// 判断是否在交易时段（北京时间）
+function isTradingTime() {
+  const d = bjNow();
+  const day = d.getDay(); // 0=周日, 6=周六
+  if (day === 0 || day === 6) return false;
+  const h = d.getHours(), m = d.getMinutes();
+  const totalMin = h * 60 + m;
+  // A股: 9:30-11:30, 13:00-15:00
+  const am = totalMin >= 9 * 60 + 30 && totalMin < 11 * 60 + 30;
+  const pm = totalMin >= 13 * 60 && totalMin < 15 * 60;
+  return am || pm;
+}
+
 // ===== 数据加载 =====
 async function loadAllData() {
   document.getElementById('updateTime').textContent = fmtTime(bjNow()) + ' (北京时间)';
   try {
-    // 优先从本地data.json加载（节假日/收盘后用这个兜底）
-    await loadFromDataFile();
-    // 再尝试拉实时数据（盘中用）
-    await Promise.allSettled([
-      loadIndices(),
-      loadGold(),
-      loadFundFlows(),
-      loadPlates(),
-    ]);
-    document.getElementById('statusText').textContent = '● 系统正常';
-    document.getElementById('statusText').className = 'status-ok';
+    // 节假日/收盘后：优先读本地兜底数据
+    if (!isTradingTime()) {
+      await loadFromDataFile();
+      document.getElementById('statusText').textContent = '● 非交易时段，数据来自最后交易日';
+      document.getElementById('statusText').className = 'status-warn';
+    } else {
+      // 盘中：先读兜底，再拉实时覆盖
+      await loadFromDataFile();
+      await Promise.allSettled([
+        loadIndices(),
+        loadGold(),
+        loadFundFlows(),
+        loadPlates(),
+      ]);
+      document.getElementById('statusText').textContent = '● 系统正常';
+      document.getElementById('statusText').className = 'status-ok';
+    }
     document.getElementById('lastUpdateTime').textContent = fmtTime(bjNow());
   } catch(e) {
     console.error(e);
