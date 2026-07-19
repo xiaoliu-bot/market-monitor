@@ -159,28 +159,45 @@ a:hover { text-decoration: underline; }
   border-radius: 0 0 6px 6px;
   background: #0a0a0a;
 }
+/* 小鹿看数据风格卡片 */
 .flow-card {
   border: 1px solid #222;
   border-radius: 6px;
-  padding: 12px;
+  padding: 12px 14px;
   background: #111;
 }
-.flow-title {
-  font-size: 14px;
-  font-weight: bold;
-  color: #e6edf3;
-  margin-bottom: 8px;
+.flow-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 }
-.flow-bars { display: flex; flex-direction: column; gap: 4px; }
-.flow-row { display: flex; align-items: center; gap: 8px; }
-.flow-label { font-size: 12px; color: #888; width: 52px; flex-shrink: 0; }
+.flow-name { font-size: 14px; font-weight: bold; color: #e6edf3; }
+.flow-amount { font-size: 15px; font-weight: bold; }
+.flow-amount.up { color: #ff4444; }
+.flow-amount.down { color: #44ff88; }
+.flow-sub-bars { display: flex; flex-direction: column; gap: 5px; }
+.flow-bar-row { display: flex; align-items: center; gap: 8px; }
+.flow-bar-label { font-size: 12px; color: #888; width: 48px; flex-shrink: 0; }
 .flow-bar-bg { flex: 1; height: 8px; background: #1a1a1a; border-radius: 4px; overflow: hidden; }
-.flow-bar-in { height: 100%; background: linear-gradient(90deg, #ff4444, #ff8888); border-radius: 4px; transition: width 0.4s; }
-.flow-bar-out { height: 100%; background: linear-gradient(90deg, #008844, #44ff88); border-radius: 4px; transition: width 0.4s; }
-.flow-val { font-size: 12px; font-weight: bold; width: 72px; text-align: right; flex-shrink: 0; }
-.flow-val.up { color: #ff4444; }
-.flow-val.down { color: #44ff88; }
-.flow-val.flat { color: #888; }
+.flow-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
+.flow-bar-fill.up { background: linear-gradient(90deg, #cc2222, #ff6666); }
+.flow-bar-fill.down { background: linear-gradient(90deg, #008833, #44ff88); }
+.flow-bar-fill.flat { background: #555; }
+.flow-bar-val { font-size: 11px; font-weight: bold; width: 76px; text-align: right; flex-shrink: 0; }
+.flow-bar-val.up { color: #ff4444; }
+.flow-bar-val.down { color: #44ff88; }
+.flow-bar-val.flat { color: #888; }
+.flow-tag {
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+.flow-tag.tag-in { background: #2a0000; color: #ff6666; }
+.flow-tag.tag-out { background: #002200; color: #66ff99; }
 
 /* 黄金 */
 .gold-card {
@@ -283,19 +300,23 @@ a:hover { text-decoration: underline; }
   <span style="color:#555;">暂无警报，正常运行中</span>
 </div>
 
-<!-- 模块1：大盘指数 -->
+<!-- 模块一：大盘指数 -->
 <div class="section">
   <div class="section-title">◆ 大盘指数</div>
   <div class="cards" id="indicesCards">
-    <div class="card" style="display:flex;align-items:center;justify-content:center;color:#333;">
-      加载中...
-    </div>
-<!-- 模块3：板块异动 -->
+    <div class="card" style="display:flex;align-items:center;justify-content:center;color:#333;">加载中...</div>
+  </div>
+</div>
+
+<!-- 模块二：板块异动看板 -->
 <div class="section">
   <div class="section-title">◆ 板块异动看板</div>
   <div class="plate-grid" id="plateGrid">
     <div style="color:#333;padding:20px;">加载中...</div>
-<!-- 模块4：黄金 -->
+  </div>
+</div>
+
+<!-- 模块三：黄金 -->
 <div class="section">
   <div class="section-title">◆ 黄金 / GOLD</div>
   <div class="gold-card" id="goldCard">
@@ -303,22 +324,24 @@ a:hover { text-decoration: underline; }
       <div class="gold-label">国际金价 (USD/oz)</div>
       <div class="gold-value" id="goldUSD">--</div>
       <div class="gold-change up" id="goldUSDChange">--</div>
-      <div class="gold-prediction" id="goldPrediction">
-        预测加载中...
-      </div>
+      <div class="gold-prediction" id="goldPrediction">预测加载中...</div>
     </div>
     <div class="gold-price-box">
       <div class="gold-label">国内金价 (CNY/g)</div>
       <div class="gold-value" id="goldCNY">--</div>
       <div class="gold-change up" id="goldCNYChange">--</div>
-      <div class="gold-prediction" id="goldCNYPrediction">
-        综合宏观政策面和技术面分析
-      </div>
-<!-- 模块2：我的持仓板块资金流 -->
+      <div class="gold-prediction" id="goldCNYPrediction">综合宏观政策面和技术面分析</div>
+    </div>
+  </div>
+</div>
+
+<!-- 模块四：持仓板块资金流 -->
 <div class="section">
   <div class="section-title">◆ 持仓板块资金流</div>
   <div class="flow-grid" id="flowGrid">
     <div style="color:#333;padding:20px;">加载中...</div>
+  </div>
+</div>
 
 <!-- 状态栏 -->
 <div class="status-bar">
@@ -355,10 +378,11 @@ const CONFIG = {
     { code: '886031', name: '科创创业AI' },
     { code: '886541', name: '机器人' },
     { code: '886542', name: '新能源电池' },
+    { code: 'HSTECH', name: '恒生科技' },
+    { code: '886080', name: '创新药' },
     { code: '886054', name: '锂矿' },
     { code: '886083', name: 'CPO' },
     { code: '886041', name: 'PCB' },
-    { code: 'HSTECH', name: '恒生科技' },
   ],
   fundPlates: {}
 };
@@ -753,109 +777,84 @@ async function loadGold() {
   }
 }
 
-// === 3. 持仓板块资金流 ===
+// === 持仓板块资金流（参考小鹿看数据风格）===
 async function loadFundFlows() {
   const container = document.getElementById('flowGrid');
-  const fundMap = CONFIG.fundPlates;
 
-  // 按板块去重
-  const plateMap = {};
-  Object.entries(fundMap).forEach(([fund, info]) => {
-    if (!plateMap[info.code]) {
-      plateMap[info.code] = { name: info.name, funds: [], codes: [] };
-    }
-    plateMap[info.code].funds.push(fund);
-    plateMap[info.code].codes.push(info.code);
-  });
-
-  const plateItems = Object.values(plateMap);
-
-  container.innerHTML = plateItems.map(p => `
+  // 渲染卡片骨架（基于 CONFIG.plates）
+  container.innerHTML = CONFIG.plates.map(p => `
     <div class="flow-card" id="flow-card-${p.code}">
-      <div class="flow-title">${p.name} <span style="font-size:11px;color:#555;font-weight:normal;">(${p.funds.join('/')})</span></div>
-      <div class="flow-bars">
-        <div class="flow-row">
-          <span class="flow-label">🌱 散户</span>
-          <div class="flow-bar-bg"><div class="flow-bar-in" id="bar-${p.code}-散户" style="width:0%"></div></div>
-          <span class="flow-val flat" id="val-${p.code}-散户">--</span>
+      <div class="flow-card-top">
+        <div class="flow-name">${p.name}</div>
+        <div class="flow-amount" id="fa-${p.code}">--</div>
+      </div>
+      <div class="flow-sub-bars">
+        <div class="flow-bar-row">
+          <span class="flow-bar-label">🌱 散户</span>
+          <div class="flow-bar-bg"><div class="flow-bar-fill" id="bar-${p.code}-散户" style="width:0%"></div></div>
+          <span class="flow-bar-val" id="fv-${p.code}-散户">--</span>
         </div>
-        <div class="flow-row">
-          <span class="flow-label">🏠 大户</span>
-          <div class="flow-bar-bg"><div class="flow-bar-in" id="bar-${p.code}-大户" style="width:0%"></div></div>
-          <span class="flow-val flat" id="val-${p.code}-大户">--</span>
+        <div class="flow-bar-row">
+          <span class="flow-bar-label">🏠 大户</span>
+          <div class="flow-bar-bg"><div class="flow-bar-fill" id="bar-${p.code}-大户" style="width:0%"></div></div>
+          <span class="flow-bar-val" id="fv-${p.code}-大户">--</span>
         </div>
-        <div class="flow-row">
-          <span class="flow-label">🏛️ 机构</span>
-          <div class="flow-bar-bg"><div class="flow-bar-in" id="bar-${p.code}-机构" style="width:0%"></div></div>
-          <span class="flow-val flat" id="val-${p.code}-机构">--</span>
-        </div>
-        <div class="flow-row">
-          <span class="flow-label">⚡ 主力</span>
-          <div class="flow-bar-bg"><div class="flow-bar-in" id="bar-${p.code}-主力" style="width:0%"></div></div>
-          <span class="flow-val flat" id="val-${p.code}-主力">--</span>
+        <div class="flow-bar-row">
+          <span class="flow-bar-label">⚡ 主力</span>
+          <div class="flow-bar-bg"><div class="flow-bar-fill" id="bar-${p.code}-主力" style="width:0%"></div></div>
+          <span class="flow-bar-val" id="fv-${p.code}-主力">--</span>
         </div>
       </div>
-      <div id="alert-${p.code}"></div>
+      <div class="flow-tag" id="ftag-${p.code}"></div>
     </div>
   `).join('');
 
-  // 加载板块资金流数据
-  const flowData = [];
-  for (const plate of plateItems) {
+  // 加载各板块资金流
+  for (const plate of CONFIG.plates) {
     try {
-      const data = await fetchPlateFlow(plate.code);
-      if (data) {
-        flowData.push({ name: plate.name, code: plate.code, ...data });
-        renderFlowCard(plate.code, data);
+      const flow = await fetchPlateFlow(plate.code);
+      if (!flow) continue;
+
+      const { 散户, 大户, 主力 } = flow;
+      const total = (散户 || 0) + (大户 || 0) + (主力 || 0);
+      const maxAbs = Math.max(Math.abs(散户||0), Math.abs(大户||0), Math.abs(主力||0), 1);
+
+      // 净流入金额
+      const faEl = document.getElementById(`fa-${plate.code}`);
+      const fmtY = v => v >= 0 ? `+${(v/100000000).toFixed(2)}亿` : `${(v/100000000).toFixed(2)}亿`;
+      faEl.textContent = fmtY(total);
+      faEl.className = `flow-amount ${total >= 0 ? 'up' : 'down'}`;
+
+      // 三条分项条
+      for (const k of ['散户', '大户', '主力']) {
+        const v = flow[k] || 0;
+        const pct = Math.abs(v) / maxAbs * 100;
+        const bar = document.getElementById(`bar-${plate.code}-${k}`);
+        const val = document.getElementById(`fv-${plate.code}-${k}`);
+        if (bar) {
+          bar.style.width = pct + '%';
+          bar.className = `flow-bar-fill ${colorCls(v)}`;
+        }
+        if (val) {
+          val.textContent = fmtY(v);
+          val.className = `flow-bar-val ${colorCls(v)}`;
+        }
       }
+
+      // 状态标签
+      const tag = document.getElementById(`ftag-${plate.code}`);
+      if (tag) {
+        if (total > 0) {
+          tag.textContent = '▲ 吸筹中';
+          tag.className = 'flow-tag tag-in';
+        } else {
+          tag.textContent = '▼ 流出中';
+          tag.className = 'flow-tag tag-out';
+        }
+      }
+
     } catch(e) {
       console.error('Flow error:', plate.code, e);
-    }
-  }
-
-  checkAlerts(flowData);
-}
-
-async function fetchPlateFlow(code) {
-  // 东财板块资金流
-  const url = `https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery&fid=f62&op=1&fltt=2&invt=2&fs=b:+${code}&fields=f12,f14,f62,f184,f66,f69,f72,f75,f78,f81,f84,f87,f204,f205,f124&_=${Date.now()}`;
-  const r = await fetch(url);
-  const text = await r.text();
-  const json = JSON.parse(text.replace(/^jQuery\(/, '').replace(/\)$/, ''));
-  const data = json.data?.diff?.[0];
-  if (!data) return null;
-
-  return {
-    flow: {
-      '散户': data.f184 || 0,
-      '大户': data.f66 || 0,
-      '机构': data.f72 || 0,
-      '主力': data.f62 || 0,
-    },
-    days10: [data.f184||0, data.f205||0],
-    days5: [data.f66||0, data.f69||0],
-  };
-}
-
-function renderFlowCard(code, data) {
-  const { flow } = data;
-  const maxVal = Math.max(...Object.values(flow).map(Math.abs), 1);
-
-  for (const [key, val] of Object.entries(flow)) {
-    const el = document.getElementById(`val-${code}-${key}`);
-    const bar = document.getElementById(`bar-${code}-${key}`);
-    if (!el || !bar) continue;
-    const absVal = Math.abs(val);
-    const pct = (absVal / maxVal * 100).toFixed(1);
-    const sign = val >= 0 ? '+' : '-';
-    el.textContent = `${sign}${(absVal/10000).toFixed(1)}万`;
-    el.className = `flow-val ${colorCls(val)}`;
-    if (val >= 0) {
-      bar.style.width = pct + '%';
-      bar.className = 'flow-bar-in';
-    } else {
-      bar.style.width = pct + '%';
-      bar.className = 'flow-bar-out';
     }
   }
 }
