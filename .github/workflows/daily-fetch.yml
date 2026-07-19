@@ -1,12 +1,14 @@
-name: 每日收盘数据抓取
+name: Daily Market Data Fetch
 
 on:
-  # 每个交易日北京时间 15:10 自动抓取
   schedule:
     - cron: '10 7 * * 1-5'   # UTC 7:10 = 北京 15:10，周一~周五
   workflow_dispatch:
   repository_dispatch:
     types: [fetch-data]
+
+permissions:
+  contents: write   # 需要写入权限才能 git push
 
 jobs:
   fetch:
@@ -19,10 +21,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 抓取数据
+      - name: Fetch data
         run: python fetch_data.py
 
-      - name: 提交数据文件
+      - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
