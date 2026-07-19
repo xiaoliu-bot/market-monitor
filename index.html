@@ -159,7 +159,72 @@ a:hover { text-decoration: underline; }
   border-radius: 0 0 6px 6px;
   background: #0a0a0a;
 }
-/* 小鹿看数据风格卡片 */
+/* ===== 历史回溯选择器 ===== */
+.history-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 6px 6px 0 0;
+  border-bottom: none;
+  flex-wrap: wrap;
+}
+.history-bar label {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+}
+#historyDateSelect {
+  background: #111;
+  color: #fff;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  outline: none;
+}
+#historyDateSelect:hover { border-color: #4af; }
+#historyDateSelect option { background: #111; }
+.history-apply-btn {
+  background: #1a3a1a;
+  color: #4af;
+  border: 1px solid #4af;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.history-apply-btn:hover {
+  background: #2a5a2a;
+  color: #6cf;
+}
+#historyInfo {
+  font-size: 11px;
+  color: #555;
+  margin-left: auto;
+}
+.history-badge {
+  background: #1a2a3a;
+  color: #4af;
+  border: 1px solid #2a4a6a;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 11px;
+}
+.history-live-badge {
+  background: #1a3a1a;
+  color: #44ff88;
+  border: 1px solid #2a5a2a;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
 .flow-card {
   border: 1px solid #222;
   border-radius: 6px;
@@ -345,6 +410,15 @@ a:hover { text-decoration: underline; }
 <!-- 模块四：持仓板块资金流 -->
 <div class="section">
   <div class="section-title">◆ 持仓板块资金流</div>
+  <div class="history-bar">
+    <label>📅 回溯日期</label>
+    <select id="historyDateSelect">
+      <option value="">— 选择历史日期 —</option>
+    </select>
+    <button class="history-apply-btn" onclick="loadHistoryDate()">加载</button>
+    <button class="history-apply-btn" id="exitHistoryBtn" style="display:none;background:#3a1a1a;color:#ff6666;border-color:#ff4444;" onclick="exitHistoryMode()">退出回溯</button>
+    <span id="historyInfo"></span>
+  </div>
   <div id="plateTreeMap" style="width:100%;height:380px;"></div>
 </div>
 
@@ -361,9 +435,107 @@ a:hover { text-decoration: underline; }
 </div>
 
 <script>
-// ===== 配置 =====
-const CONFIG = {
-  refreshCooldown: 10000,      // 10秒冷却
+// ===== 历史回溯 =====
+let isHistoryMode = false;
+
+async function loadHistoryList() {
+  // 尝试从 GitHub API 获取 api/history/ 目录下的所有历史文件
+  const select = document.getElementById('historyDateSelect');
+  if (!select) return;
+  try {
+    // GitHub API: 列出仓库某路径下的文件
+    const repo = 'xiaoliu-bot/market-monitor';
+    const token = localStorage.getItem('gh_token'); // 用户可选填入自己的 token
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'MarketMonitor/1.0',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const req = new Request(`https://api.github.com/repos/${repo}/contents/api/history`, { headers });
+    const resp = await fetch(req);
+    if (!resp.ok) throw new Error('无法获取历史列表');
+    const files = await resp.json();
+    // 清空并填充
+    select.innerHTML = '<option value="">— 选择历史日期 —</option>';
+    const today = new Date().toISOString().slice(0,10);
+    for (const f of files.sort((a,b)=>b.name.localeCompare(a.name))) {
+      if (!f.name.endsWith('.json')) continue;
+      const date = f.name.replace('.json','');
+      const d = new Date(date);
+      const label = `${date} ${['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]}`;
+      const opt = new Option(label, date);
+      if (date === today) opt.textContent += ' ★今日';
+      select.appendChild(opt);
+    }
+    document.getElementById('historyInfo').textContent = `共 ${select.options.length - 1} 天历史数据`;
+  } catch(e) {
+    console.warn('历史列表加载失败:', e);
+    // fallback: 本地已有历史数据时列出
+    select.innerHTML = '<option value="">— 选择历史日期 —</option>';
+    document.getElementById('historyInfo').textContent = '历史列表加载失败';
+  }
+}
+
+async function loadHistoryDate() {
+  const select = document.getElementById('historyDateSelect');
+  const date = select.value;
+  if (!date) return;
+  const info = document.getElementById('historyInfo');
+  info.textContent = '⏳ 加载中...';
+  try {
+    const d = await fetch(`api/history/${date}.json?t=${Date.now()}`).then(r=>r.json());
+    isHistoryMode = true;
+    // 渲染指数
+    for (const [key, idx] of Object.entries(d.indices || {})) {
+      const el = document.getElementById(`val-${key}`);
+      if (!el) continue;
+      el.textContent = typeof idx.price === 'number' ? idx.price.toFixed(2) : '--';
+      el.className = `card-value ${colorCls(idx.pct)}`;
+      const chgEl = document.getElementById(`chg-${key}`);
+      if (chgEl) {
+        chgEl.textContent = `${idx.pct >= 0 ? '+' : ''}${idx.pct?.toFixed(2)}%`;
+        chgEl.className = `card-change ${colorCls(idx.pct)}`;
+      }
+    }
+    // 渲染黄金
+    if (d.gold) {
+      const g = d.gold;
+      document.getElementById('goldUSD').textContent = g.usd || '--';
+      document.getElementById('goldUSDChange').textContent = `${(g.usd_pct||0) >= 0 ? '+' : ''}${(g.usd_pct||0).toFixed(2)}%`;
+      document.getElementById('goldUSDChange').className = `gold-change ${colorCls(g.usd_pct)}`;
+      document.getElementById('goldCNY').textContent = g.cny || '--';
+      document.getElementById('goldCNYChange').textContent = `${(g.cny_pct||0) >= 0 ? '+' : ''}${(g.cny_pct||0).toFixed(2)}%`;
+      document.getElementById('goldCNYChange').className = `gold-change ${colorCls(g.cny_pct)}`;
+    }
+    // 渲染热力图
+    if (d.plateFlows && d.plateFlows.length > 0) {
+      renderStaticFlows(d.plateFlows);
+    }
+    document.getElementById('updateTime').textContent = `${d.updated || date} (历史回溯)`;
+    document.getElementById('statusText').textContent = `📅 ${date} 历史数据`;
+    document.getElementById('statusText').className = 'status-warn';
+    info.innerHTML = `<span class="history-badge">📅 ${date}</span>`;
+  } catch(e) {
+    info.textContent = '❌ 加载失败';
+    console.error('历史数据加载失败:', e);
+  }
+}
+
+function exitHistoryMode() {
+  isHistoryMode = false;
+  document.getElementById('historyDateSelect').value = '';
+  document.getElementById('historyInfo').innerHTML = '<span class="history-live-badge">● 实时</span>';
+  document.getElementById('statusText').textContent = '● 系统正常';
+  document.getElementById('statusText').className = 'status-ok';
+  loadAllData();
+}
+
+  if (!isHistoryMode) {
+    loadHistoryList();
+  } else {
+    document.getElementById('exitHistoryBtn').style.display = '';
+  }
+}
   maxHourly: 50,               // 每小时上限
   maxDaily: 200,               // 每天上限
   autoRefreshTimes: [           // 自动刷新时间（北京时间）
@@ -550,12 +722,7 @@ function isTradingTime() {
 async function loadAllData() {
   document.getElementById('updateTime').textContent = fmtTime(bjNow()) + ' (北京时间)';
   try {
-    // 节假日/收盘后：优先读本地兜底数据
-    if (!isTradingTime()) {
-      await loadFromDataFile();
-      document.getElementById('statusText').textContent = '● 非交易时段，数据来自最后交易日';
-      document.getElementById('statusText').className = 'status-warn';
-    } else {
+    if (isTradingTime()) {
       // 盘中：先读兜底，再拉实时覆盖
       await loadFromDataFile();
       await Promise.allSettled([
@@ -564,8 +731,10 @@ async function loadAllData() {
         loadFundFlows(),
         loadPlates(),
       ]);
-      document.getElementById('statusText').textContent = '● 系统正常';
-      document.getElementById('statusText').className = 'status-ok';
+    }
+    // 非交易时段（节假日/收盘后）直接展示 data.json 兜底数据
+    if (!isTradingTime()) {
+      await loadFromDataFile();
     }
     document.getElementById('lastUpdateTime').textContent = fmtTime(bjNow());
   } catch(e) {
@@ -1059,10 +1228,12 @@ function updateNextAutoRefresh() {
 
 // 启动
 updateRateLimitUI();
-loadAllData();
-setInterval(loadAllData, 5 * 60 * 1000); // 每5分钟全量刷新
-setInterval(loadFundFlows, 30 * 1000);           // 每30秒刷新板块资金流
-setInterval(updateNextAutoRefresh, 30000);
+// 非历史模式下才自动刷新
+if (!isHistoryMode) {
+  setInterval(loadAllData, 5 * 60 * 1000); // 每5分钟全量刷新
+  setInterval(loadFundFlows, 30 * 1000);   // 每30秒刷新板块资金流
+  setInterval(updateNextAutoRefresh, 30000); // 每30秒更新倒计时
+}
 </script>
 </body>
 </html>
