@@ -8,13 +8,15 @@ on:
     types: [fetch-data]
 
 permissions:
-  contents: write   # 需要写入权限才能 git push
+  contents: write
 
 jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # 不继承 token
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -24,10 +26,14 @@ jobs:
       - name: Fetch data
         run: python fetch_data.py
 
-      - name: Commit and push
+      - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://xiaoliu-bot:${{ secrets.GH_PAT }}@github.com/xiaoliu-bot/market-monitor.git
+
+      - name: Commit and push
+        run: |
           git add api/data.json api/history/
           git diff --staged --quiet && echo "No changes" || {
             DATE=$(date '+%Y-%m-%d')
