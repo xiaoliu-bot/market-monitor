@@ -719,29 +719,23 @@ function isTradingTime() {
 }
 
 // ===== 数据加载 =====
+async // ===== 数据加载 =====
 async function loadAllData() {
   document.getElementById('updateTime').textContent = fmtTime(bjNow()) + ' (北京时间)';
   try {
-    // 优先拉实时数据（每次刷新都尝试新数据）
-    const results = await Promise.allSettled([
+    // 第1步：先加载 data.json 兜底（保证页面一定有数据显示）
+    await loadFromDataFile();
+    // 第2步：尝试实时数据，有就覆盖，没有就保留兜底数据
+    await Promise.allSettled([
       loadIndices(),
       loadGold(),
       loadFundFlows(),
       loadPlates(),
     ]);
-    // 如果盘中实时数据全部失败，才用 data.json 兜底
-    const allFailed = results.every(r => r.status === 'rejected');
-    if (allFailed && !isTradingTime()) {
-      await loadFromDataFile();
-    }
-    // 非交易时段：实时API失败后用 data.json
-    if (!isTradingTime() && allFailed) {
-      await loadFromDataFile();
-    }
     document.getElementById('lastUpdateTime').textContent = fmtTime(bjNow());
   } catch(e) {
-    console.error(e);
-    // 异常时最后兜底一次
+    console.error('loadAllData error:', e);
+    // 异常时确保有兜底数据
     await loadFromDataFile();
   }
   updateNextAutoRefresh();
