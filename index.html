@@ -722,25 +722,27 @@ function isTradingTime() {
 async function loadAllData() {
   document.getElementById('updateTime').textContent = fmtTime(bjNow()) + ' (北京时间)';
   try {
-    if (isTradingTime()) {
-      // 盘中：先读兜底，再拉实时覆盖
+    // 优先拉实时数据（每次刷新都尝试新数据）
+    const results = await Promise.allSettled([
+      loadIndices(),
+      loadGold(),
+      loadFundFlows(),
+      loadPlates(),
+    ]);
+    // 如果盘中实时数据全部失败，才用 data.json 兜底
+    const allFailed = results.every(r => r.status === 'rejected');
+    if (allFailed && !isTradingTime()) {
       await loadFromDataFile();
-      await Promise.allSettled([
-        loadIndices(),
-        loadGold(),
-        loadFundFlows(),
-        loadPlates(),
-      ]);
     }
-    // 非交易时段（节假日/收盘后）直接展示 data.json 兜底数据
-    if (!isTradingTime()) {
+    // 非交易时段：实时API失败后用 data.json
+    if (!isTradingTime() && allFailed) {
       await loadFromDataFile();
     }
     document.getElementById('lastUpdateTime').textContent = fmtTime(bjNow());
   } catch(e) {
     console.error(e);
-    document.getElementById('statusText').textContent = '● 数据加载异常';
-    document.getElementById('statusText').className = 'status-error';
+    // 异常时最后兜底一次
+    await loadFromDataFile();
   }
   updateNextAutoRefresh();
 }
