@@ -1,4 +1,4 @@
-name: Daily Market Data Fetch
+name: 每日收盘数据抓取
 
 on:
   schedule:
@@ -15,36 +15,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install akshare -q
+      - name: 安装依赖
+        run: pip install akshare pandas requests
 
-      - name: Fetch data
+      - name: 抓取数据
         run: python fetch_data.py
+        continue-on-error: true
 
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://xiaoliu-bot:${{ secrets.GH_PAT }}@github.com/xiaoliu-bot/market-monitor.git
-
-      - name: Commit and push
-        run: |
-          # 检查是否有变化（不依赖退出码，避免 set -e 问题）
-          CHANGES=$(git status --porcelain api/data.json api/history/)
-          if [ -n "$CHANGES" ]; then
-            DATE=$(date '+%Y-%m-%d')
-            git add api/data.json api/history/
-            git commit -m "📊 收盘数据 $DATE"
-            git push
-            echo "✅ 推送成功"
-          else
-            echo "无变化，跳过推送"
-          fi
+      - name: 提交数据文件
+        run: python scripts/github_push.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
