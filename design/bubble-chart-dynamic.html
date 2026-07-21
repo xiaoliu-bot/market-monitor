@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>板块资金流 · 实时气泡图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0A0B;
+    --card:#141417;
+    --border:#27272A;
+    --text:#FAFAFA;
+    --muted:#A1A1AA;
+    --faint:#71717A;
+    --red:#F43F5E;
+    --green:#10B981;
+    --line:#333344;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:32px 16px;
+    min-height:100vh;
+  }
+  .wrap{width:100%;max-width:1376px;}
+  .head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:14px;flex-wrap:wrap;gap:12px;
+  }
+  .title{font-size:18px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:10px;}
+  .live{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);font-weight:500;}
+  .dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55);}70%{box-shadow:0 0 0 8px rgba(34,197,94,0);}100%{box-shadow:0 0 0 0 rgba(34,197,94,0);}}
+  .meta{font-size:12px;color:var(--faint);font-family:'JetBrains Mono',ui-monospace,monospace;}
+  .panel{
+    position:relative;width:100%;height:520px;background:var(--card);
+    border:1px solid var(--border);border-radius:8px;overflow:hidden;
+  }
+  .center-line{position:absolute;left:0;right:0;top:260px;height:1px;background:var(--line);}
+  .legend{position:absolute;left:40px;top:245px;font-size:12px;font-weight:500;}
+  .legend.in{color:var(--red);}
+  .legend.out{position:absolute;right:40px;left:auto;color:var(--green);}
+  .bubble{
+    position:absolute;border-radius:50%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:#fff;text-align:center;
+    transition:left .85s cubic-bezier(.22,.61,.36,1),top .85s cubic-bezier(.22,.61,.36,1),
+               width .85s cubic-bezier(.22,.61,.36,1),height .85s cubic-bezier(.22,.61,.36,1);
+    box-shadow:inset -6px -8px 18px rgba(0,0,0,.35),inset 4px 5px 14px rgba(255,255,255,.18),0 6px 18px rgba(0,0,0,.45);
+    will-change:left,top,width,height;
+  }
+  .bubble.red{background:radial-gradient(circle at 34% 30%,#FF738C,#D11A33);}
+  .bubble.green{background:radial-gradient(circle at 34% 30%,#33D49C,#05864F);}
+  .bubble .name{font-size:11px;font-weight:700;line-height:1.1;text-shadow:0 1px 2px rgba(0,0,0,.4);padding:0 4px;}
+  .bubble .amt{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:700;font-size:10px;line-height:1.2;text-shadow:0 1px 2px rgba(0,0,0,.4);font-variant-numeric:tabular-nums;}
+  .foot{margin-top:14px;font-size:12px;color:var(--faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .note{font-size:11px;color:#52525B;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div class="title">板块资金流 · 实时气泡图
+        <span class="live"><span class="dot"></span>LIVE</span>
+      </div>
+      <div class="meta" id="clock">最近更新 --:--:--</div>
+    </div>
+    <div class="panel" id="panel">
+      <div class="center-line"></div>
+      <div class="legend in">↑ 资金净流入（吸筹）</div>
+      <div class="legend out">↓ 资金净流出（出货）</div>
+    </div>
+    <div class="foot">
+      <span>球径 ∝ 资金绝对值 ｜ 红=流入 绿=流出 ｜ 每 2.2s 刷新</span>
+      <span class="note">* 本原型为模拟实时数据流，仅用于演示动态效果</span>
+    </div>
+  </div>
+<script>
+  const panel = document.getElementById('panel');
+  const clock = document.getElementById('clock');
+  // 初始数据（与 Ardot 设计稿一致），单位为亿元
+  const red = [
+    {name:'半导体', v:42.3},
+    {name:'芯片', v:31.5},
+    {name:'CPO', v:25.8},
+    {name:'科创创业AI', v:20.1},
+    {name:'机器人', v:16.4},
+    {name:'PCB', v:13.7},
+  ];
+  const green = [
+    {name:'锂矿', v:-36.8},
+    {name:'新能源电池', v:-22.1},
+    {name:'细分化工', v:-18.5},
+    {name:'恒生科技', v:-12.3},
+    {name:'创新药', v:-9.8},
+  ];
+
+  // 创建气泡 DOM
+  function makeBubble(d, group){
+    const el = document.createElement('div');
+    el.className = 'bubble ' + group;
+    el.innerHTML = '<span class="name"></span><span class="amt"></span>';
+    panel.appendChild(el);
+    d.el = el;
+    d.group = group;
+    return el;
+  }
+  red.forEach(d=>makeBubble(d,'red'));
+  green.forEach(d=>makeBubble(d,'green'));
+
+  const SCALE = 9.85; // r = SCALE * sqrt(|v|)
+  function radius(v){ return Math.max(28, SCALE*Math.sqrt(Math.abs(v))); }
+
+  function layout(group, list){
+    const W = panel.clientWidth;
+    const cx = W/2;
+    const cy = group==='red' ? 130 : 390;
+    const margin = 70;
+    const sorted = [...list].sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
+    const n = sorted.length;
+    const gap = Math.min(215, (W - 2*margin)/n);
+    sorted.forEach((d,i)=>{
+      const r = radius(d.v);
+      let x;
+      if(i===0){ x = cx; }
+      else {
+        const dir = (i%2===1) ? -1 : 1;
+        const step = Math.ceil(i/2);
+        x = cx + dir*step*gap;
+      }
+      x = Math.max(margin, Math.min(W-margin, x));
+      d.el.style.width = (r*2)+'px';
+      d.el.style.height = (r*2)+'px';
+      d.el.style.left = (x - r)+'px';
+      d.el.style.top = (cy - r)+'px';
+      d.el.querySelector('.name').textContent = d.name;
+      const sign = d.v>=0 ? '+' : '-';
+      d.el.querySelector('.amt').textContent = sign + Math.abs(d.v).toFixed(1) + '亿';
+    });
+  }
+
+  function tick(){
+    // 模拟实时跳动：小幅随机游走，幅度限制，保持各自方向
+    [...red, ...green].forEach(d=>{
+      d.v += (Math.random()*2-1)*4.2;
+      const cap = 48, floor = 6;
+      if(d.v > cap) d.v = cap - Math.random()*2;
+      if(d.v < -cap) d.v = -cap + Math.random()*2;
+      if(d.group==='red' && d.v < floor) d.v = floor + Math.random()*2;
+      if(d.group==='green' && d.v > -floor) d.v = -floor - Math.random()*2;
+    });
+    layout('red', red);
+    layout('green', green);
+    const t = new Date();
+    clock.textContent = '最近更新 ' + t.toTimeString().slice(0,8);
+  }
+
+  tick();
+  setInterval(tick, 2200);
+  window.addEventListener('resize', ()=>{ layout('red',red); layout('green',green); });
+</script>
+</body>
+</html>
