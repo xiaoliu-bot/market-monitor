@@ -7,32 +7,122 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: #000;
+  background: radial-gradient(125% 125% at 50% -10%, #16171f 0%, #0a0b11 48%, #000 100%);
   color: #fff;
   font-family: 'Courier New', 'PingFang SC', 'Microsoft YaHei', monospace;
   min-height: 100vh;
   padding: 20px;
 }
 
-/* 顶部 Hero */
+/* 顶部 Hero — 液态玻璃 */
 .hero {
   max-width: 1100px;
   margin: 0 auto 28px;
-  padding: 28px 24px;
-  border: 1px solid #222;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #0a0a0a 0%, #0d0d12 100%);
+  padding: 26px 30px;
+  border-radius: 22px;
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  background: rgba(22,24,33,0.5);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow:
+    0 18px 50px rgba(0,0,0,0.55),
+    inset 0 1px 1px rgba(255,255,255,0.22),
+    inset 0 -2px 4px rgba(0,0,0,0.45);
 }
+/* 彩色光晕（透过玻璃透出色彩） */
 .hero::before {
   content: "";
   position: absolute;
-  top: -50%; right: -10%;
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(68,170,255,0.08) 0%, transparent 70%);
+  inset: -35%;
+  background:
+    radial-gradient(circle at 16% 24%, rgba(68,130,255,0.42), transparent 42%),
+    radial-gradient(circle at 84% 78%, rgba(165,95,255,0.38), transparent 46%),
+    radial-gradient(circle at 58% 12%, rgba(40,210,255,0.22), transparent 40%);
+  filter: blur(45px);
+  z-index: 0;
   pointer-events: none;
 }
+/* 顶部液态反光 */
+.hero::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), transparent);
+  z-index: 0;
+  pointer-events: none;
+}
+.hero > * { position: relative; z-index: 1; }
+.hero-main { flex: 1; min-width: 0; order: 1; }
+
+/* 赞赏区 — 玻璃子卡 */
+.hero-pay {
+  order: 2;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.28),
+    inset 0 -2px 4px rgba(0,0,0,0.35);
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+.hero-pay:hover {
+  background: rgba(255,255,255,0.11);
+  border-color: rgba(120,175,255,0.55);
+}
+.pay-title {
+  font-size: 11px;
+  color: #d3e2ff;
+  letter-spacing: 0.3px;
+  text-align: center;
+  line-height: 1.6;
+  max-width: 220px;
+  text-shadow: 0 1px 5px rgba(0,0,0,0.7);
+}
+.pay-title span { display: block; }
+.pay-codes { display: flex; gap: 12px; }
+.pay-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  transition: transform 0.3s ease;
+}
+.pay-item:hover { transform: translateY(-3px); }
+.pay-item img {
+  width: 66px;
+  height: 66px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: #fff;
+  border: 1px solid rgba(255,255,255,0.35);
+  box-shadow:
+    0 5px 16px rgba(0,0,0,0.5),
+    inset 0 1px 1px rgba(255,255,255,0.6);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+.pay-item:hover img {
+  border-color: rgba(150,195,255,0.9);
+  box-shadow:
+    0 10px 24px rgba(80,150,255,0.5),
+    inset 0 1px 1px rgba(255,255,255,0.7);
+}
+.pay-label { font-size: 10px; color: #aebcd4; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
+.pay-item:hover .pay-label { color: #d3e2ff; }
 .hero-title {
   font-size: 30px;
   font-weight: bold;
@@ -82,13 +172,18 @@ body {
 .card {
   display: flex;
   align-items: stretch;
-  border: 1px solid #222;
-  border-radius: 12px;
-  background: #0a0a0a;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.045);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.14),
+    0 8px 24px rgba(0,0,0,0.4);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
   opacity: 0;
   transform: translateY(12px);
   animation: fadeUp 0.5s ease forwards;
@@ -101,9 +196,12 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 .card:hover {
-  transform: translateY(-5px);
-  border-color: #4af;
-  box-shadow: 0 8px 30px rgba(68,170,255,0.15);
+  transform: translateY(-6px);
+  border-color: rgba(120,175,255,0.6);
+  background: rgba(255,255,255,0.08);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.25),
+    0 14px 40px rgba(68,130,255,0.22);
 }
 .card-icon {
   width: 92px;
@@ -112,7 +210,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 40px;
-  border-right: 1px solid #1a1a1a;
+  border-right: 1px solid rgba(255,255,255,0.08);
 }
 .card-body {
   flex: 1;
@@ -167,7 +265,7 @@ body {
 .tag {
   font-size: 11px;
   color: #aaa;
-  background: #141414;
+  background: rgba(255,255,255,0.06);
   border: 1px solid #222;
   border-radius: 10px;
   padding: 2px 9px;
@@ -215,6 +313,8 @@ body {
 
 @media (max-width: 600px) {
   .hero-title { font-size: 22px; }
+  .hero { flex-direction: column; align-items: stretch; gap: 16px; padding: 22px 18px; }
+  .hero-pay { width: 100%; }
   .card-icon { width: 70px; font-size: 32px; }
   body { padding: 12px; }
 }
@@ -224,11 +324,29 @@ body {
 
 <!-- 顶部 Hero -->
 <div class="hero">
-  <div class="hero-title">看板总览 · 数据中枢</div>
-  <div class="hero-sub">DASHBOARD HUB · A股 / ETF / 指数 实时监控聚合入口</div>
-  <div class="hero-meta">
-    <span><span class="dot"></span><b>3</b> 个看板在线</span>
-    <span>当前时间：<b id="now">--</b></span>
+  <div class="hero-pay">
+    <div class="pay-title">
+      <span>如果我的内容对你有所帮助或启发，</span>
+      <span>欢迎扫码赞赏，让创作继续发生 ✨</span>
+    </div>
+    <div class="pay-codes">
+      <a class="pay-item" href="./assets/alipay.jpg" target="_blank" title="支付宝赞赏">
+        <img src="./assets/alipay.jpg" alt="支付宝赞赏码">
+        <span class="pay-label">支付宝</span>
+      </a>
+      <a class="pay-item" href="./assets/wechat-pay-cropped.png" target="_blank" title="微信赞赏">
+        <img src="./assets/wechat-pay-cropped.png" alt="微信赞赏码">
+        <span class="pay-label">微信</span>
+      </a>
+    </div>
+  </div>
+  <div class="hero-main">
+    <div class="hero-title">看板总览 · 数据中枢</div>
+    <div class="hero-sub">DASHBOARD HUB · A股 / ETF / 指数 实时监控聚合入口</div>
+    <div class="hero-meta">
+      <span><span class="dot"></span><b>3</b> 个看板在线</span>
+      <span>当前时间：<b id="now">--</b></span>
+    </div>
   </div>
 </div>
 
