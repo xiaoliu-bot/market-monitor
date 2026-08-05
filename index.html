@@ -299,6 +299,46 @@ body {
 .icon-white { background: linear-gradient(135deg, #0a0a1a, #0a0a0a); }
 .icon-div { background: linear-gradient(135deg, #2a2008, #0a0a0a); }
 
+/* GitHub 入口横幅 */
+.github-banner {
+  max-width: 1100px;
+  margin: 24px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(120,175,255,0.3);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.14), 0 8px 24px rgba(0,0,0,0.4);
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+.github-banner:hover {
+  border-color: rgba(120,175,255,0.6);
+  background: rgba(255,255,255,0.08);
+}
+.gh-icon { font-size: 32px; flex-shrink: 0; line-height: 1; }
+.gh-text { flex: 1; min-width: 0; }
+.gh-title { font-size: 15px; font-weight: bold; color: #fff; margin-bottom: 3px; letter-spacing: 0.3px; }
+.gh-sub { font-size: 12px; color: #9aa7bd; line-height: 1.5; }
+.gh-btn {
+  flex-shrink: 0;
+  padding: 11px 20px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4af 0%, #6a8cff 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(68,140,255,0.4);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.gh-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(68,140,255,0.55); }
+
 /* 底部 */
 .footer {
   max-width: 1100px;
@@ -316,6 +356,8 @@ body {
   .hero-title { font-size: 22px; }
   .hero { flex-direction: column; align-items: stretch; gap: 16px; padding: 22px 18px; }
   .hero-pay { width: 100%; }
+  .github-banner { flex-direction: column; align-items: stretch; text-align: center; gap: 12px; }
+  .gh-btn { width: 100%; }
   .card-icon { width: 70px; font-size: 32px; }
   body { padding: 12px; }
 }
@@ -446,6 +488,16 @@ body {
     </div>
   </a>
 
+</div>
+
+<!-- GitHub 入口 -->
+<div class="github-banner">
+  <div class="gh-icon">🐙</div>
+  <div class="gh-text">
+    <div class="gh-title">看板背后的代码都在 GitHub</div>
+    <div class="gh-sub">所有看板均为开源项目，数据抓取与自动部署流水线一并公开</div>
+  </div>
+  <a class="gh-btn" href="https://github.com/xiaoliu-bot/" target="_blank" rel="noopener">访问 xiaoliu-bot 的 GitHub ↗</a>
 </div>
 
 <!-- 底部 -->
